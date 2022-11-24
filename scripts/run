@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -e
+cp data/Main.hs compilation
+cd compilation
+timeout -k 2 1 ghc -o kek Main.hs -O2
+timeout -k 2 1 ./kek 1>&2

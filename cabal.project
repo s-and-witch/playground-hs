@@ -1,0 +1,6 @@
+packages: ./*.cabal
+
+source-repository-package
+    type: git
+    location: https://github.com/qnikst/pool.git
+    tag: 5b04d120057ba5ff3c00f7e41e6c5c1a1a3cc0fe
