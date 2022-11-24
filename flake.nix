@@ -27,6 +27,7 @@
             wreq
             servant-server
             servant-client
+            typed-process
           ];
         mkdockerImage = additionalPackages: ghcVer:
           pkgs.dockerTools.buildLayeredImage {
