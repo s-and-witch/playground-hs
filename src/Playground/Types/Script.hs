@@ -8,6 +8,7 @@ import           Data.ByteString.Lazy.Char8 (ByteString)
 import           System.Envy                (Var)
 
 data Script = Run | Core
+  deriving Show
 
 selectScript :: Script -> ByteString
 selectScript Run  = "scripts/run"

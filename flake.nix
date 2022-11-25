@@ -25,26 +25,34 @@
         genericPackages = pkgs: with pkgs;
           [ lens
             wreq
-            servant-server
-            servant-client
             typed-process
           ];
-        mkdockerImage = additionalPackages: ghcVer:
-          pkgs.dockerTools.buildLayeredImage {
-            name = ghcVer + "env";
-            contents = [
-              (pkgs.haskell.packages.${ghcVer}.ghcWithPackages
-                (pkgs: genericPackages pkgs ++ additionalPackages pkgs))
-              pkgs.bash
-              pkgs.coreutils
-            ];
+
+        mkGhc = additionalPackages: ghcVer:
+          pkgs.haskell.packages.${ghcVer}.ghcWithPackages
+                (pkgs: genericPackages pkgs ++ additionalPackages pkgs);
+
+        mkGhcSimle = mkGhc  (_ : []);
+        ghc1 = mkGhcSimle "ghc8107";
+        ghc2 = mkGhcSimle "ghc902";
+        ghc3 = mkGhcSimle "ghc924";
+        ghc4 = mkGhcSimle "ghc942";
+
+        dockerImage = pkgs.dockerTools.buildLayeredImage {
+          name = "playgroundhsenv";
+          contents = [ ghc1 ghc2 ghc3 ghc4 pkgs.bash pkgs.coreutils ];
         };
-        mkSimpleDockerImage = mkdockerImage ( _ : []);
-        envVars = workers: with pkgs; {
-          GHC902_IMAGE = mkSimpleDockerImage "ghc902";
-          SCRIPTS_DIR = ./scripts;
+
+        envVars = workers: timeout: with pkgs; {
+          GHC1          = "${ghc1}/bin/ghc";
+          GHC2          = "${ghc2}/bin/ghc";
+          GHC3          = "${ghc3}/bin/ghc";
+          GHC4          = "${ghc4}/bin/ghc";
+          DOCKER_IMAGE  = dockerImage;
+          SCRIPTS_DIR   = ./scripts;
           WORKERS_COUNT = toString workers;
-          DOCKER = "${docker}/bin/docker";
+          DOCKER        = "${docker}/bin/docker";
+          TIMEOUT       = "${toString timeout.compiler.term},${toString timeout.compiler.kill},${toString timeout.prog.term},${toString timeout.prog.kill}";
         };
       in {
         packages.${packageName} =
@@ -73,6 +81,28 @@
                 type = types.int;
                 default = 8;
               };
+              timeout = {
+                compiler = {
+                  term = mkOption {
+                    type = types.int;
+                    default = 2;
+                  };
+                  kill = mkOption {
+                    type = types.int;
+                    default = 3;
+                  };
+                };
+                prog = {
+                  term = mkOption {
+                    type = types.int;
+                    default = 1;
+                  };
+                  kill = mkOption {
+                    type = types.int;
+                    default = 2;
+                  };
+                };
+              };
             };
             config = mkIf cfg.enable {
               users.users.playground-hs = {
@@ -87,7 +117,7 @@
                 serviceConfig = {
                     ExecStart = "${self.defaultPackage.${system}}/bin/playground-hs";
                     EnvironmentFile = cfg.envFile;
-                    Environment = concatStringsSep " " (pkgs.lib.mapAttrsToList (name: value: name + "=" + value) (envVars cfg.workersCount));
+                    Environment = concatStringsSep " " (pkgs.lib.mapAttrsToList (name: value: name + "=" + value) (envVars cfg.workersCount cfg.timeout));
                     User = "playground-hs";
                     Group = "docker";
                 };
@@ -103,6 +133,6 @@
             zlib
           ];
           inputsFrom = builtins.attrValues self.packages.${system};
-        } // envVars 8);
+        } // envVars 8 {compiler = {term = 2; kill = 3;}; prog = {term = 1; kill = 2;};});
       });
 }

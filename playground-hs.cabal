@@ -65,10 +65,13 @@ library
     Playground.Docker
     Playground.Session
     Playground.Types.Docker
+    Playground.Types.Timeout
     Playground.Types.Workspace
     Playground.Types.Script
     Playground.Types.StartupConfig
     Playground.Types.SessionConfig
+    Playground.Types.OptLevel
+    Playground.Types.GhcVersion
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -89,6 +92,7 @@ library
     , directory
     , mtl
     , unliftio
+    , split
 
   -- Directories containing source files.
   hs-source-dirs:   src

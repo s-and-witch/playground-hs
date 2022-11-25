@@ -31,7 +31,7 @@ runPlaygroundSession MkSessionConfig{..} = do
 
     liftIO $ BS.writeFile (mkFilePath filename) content
 
-    command <- runDocker script w
+    command <- runDocker script optLevel ghcVersion w
     (errCode, output) <- readProcessStderr command
 
     liftIO $ removeFile (mkFilePath filename)

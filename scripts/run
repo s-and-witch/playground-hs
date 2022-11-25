@@ -1,7 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
+
+read -ra TIMEOUT <<< "$1"
+
 cp data/Main.hs compilation
 cd compilation
-timeout -k 12 8 ghc -o kek Main.hs -O2
-timeout -k 12 8 ./kek 1>&2
+timeout -k "${TIMEOUT[0]}" "${TIMEOUT[1]}" $GHC -o kek Main.hs $2
+timeout -k "${TIMEOUT[2]}" "${TIMEOUT[3]}" ./kek 1>&2
