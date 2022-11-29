@@ -1,16 +1,16 @@
 module Playground.Types.StartupConfig where
 
+import           Data.ByteString.Lazy.Char8  (ByteString)
 import           Data.Text                   (Text)
 import           Playground.Types.Docker     (Docker, DockerImagePath)
 import           Playground.Types.GhcVersion (GhcPath)
-import           Playground.Types.Script     (ScriptsDir)
-import           Playground.Types.Timeout
+import           Playground.Types.Timeout    (Timeout)
 import           System.Envy                 (FromEnv (fromEnv), env)
 
 
 data StartupConfig = MkStartupConfig
   { workersCount    :: Int
-  , scriptsDir      :: ScriptsDir
+  , scriptsDir      :: ByteString
   , ghc1Path        :: GhcPath
   , ghc2Path        :: GhcPath
   , ghc3Path        :: GhcPath

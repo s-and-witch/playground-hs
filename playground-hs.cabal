@@ -60,18 +60,22 @@ library
 
   -- Modules exported by the library.
   exposed-modules:
-    Playground.Pool
-    Playground.Files
     Playground.Docker
+    Playground.Files
     Playground.Session
+    Playground.TaskQueue
     Playground.Types.Docker
+    Playground.Types.GhcVersion
+    Playground.Types.OptLevel
+    Playground.Types.Script
+    Playground.Types.SessionConfig
+    Playground.Types.SessionResult
+    Playground.Types.StartupConfig
+    Playground.Types.TaskQueue
     Playground.Types.Timeout
     Playground.Types.Workspace
-    Playground.Types.Script
-    Playground.Types.StartupConfig
-    Playground.Types.SessionConfig
-    Playground.Types.OptLevel
-    Playground.Types.GhcVersion
+    Playground.Utils
+    Playground.Worker
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -81,18 +85,18 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:
-    , base        ^>=4.15.1.0
+    , async
+    , base           ^>=4.15.1.0
     , bytestring
-    , typed-process
-    , resource-pool
-    , stm
-    , envy
-    , text
-    , temporary
     , directory
+    , envy
     , mtl
-    , unliftio
+    , resource-pool
     , split
+    , stm
+    , temporary
+    , text
+    , typed-process
 
   -- Directories containing source files.
   hs-source-dirs:   src
@@ -115,13 +119,15 @@ executable playground-hs
 
   -- Other library packages from which modules are imported.
   build-depends:
+    , async
     , base                 ^>=4.15.1.0
     , bytestring
-    , playground-hs
-    , telegram-bot-simple
-    , text
     , envy
     , mtl
+    , playground-hs
+    , stm
+    , telegram-bot-simple
+    , text
 
   -- Directories containing source files.
   hs-source-dirs:   app

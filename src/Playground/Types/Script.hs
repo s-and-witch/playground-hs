@@ -5,7 +5,6 @@
 module Playground.Types.Script where
 
 import           Data.ByteString.Lazy.Char8 (ByteString)
-import           System.Envy                (Var)
 
 data Script = Run | Core
   deriving Show
@@ -13,7 +12,3 @@ data Script = Run | Core
 selectScript :: Script -> ByteString
 selectScript Run  = "scripts/run"
 selectScript Core = "scripts/core"
-
-newtype ScriptsDir = MkScriptsDir ByteString
-  deriving Show
-  deriving newtype Var

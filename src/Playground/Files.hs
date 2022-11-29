@@ -20,7 +20,8 @@ withPlaygroundRuntimeDir callback =
   withSystemTempDirectory "playdroundhs" (callback . MkRuntimeDir . BS.pack)
 
 
-makeWorkspaceDir :: RuntimeDir -> Workspace -> IO ()
+makeWorkspaceDir :: RuntimeDir -> Workspace -> IO ByteString
 makeWorkspaceDir rd w = do
   let dir = getWorkspaceDir w rd
   createDirectory (mkFilePath dir)
+  pure dir

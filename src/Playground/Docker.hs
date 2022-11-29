@@ -8,40 +8,40 @@ import           Control.Monad.Reader           (MonadReader (ask), ReaderT,
                                                  asks, void)
 import           Data.ByteString.Lazy.Char8     (ByteString)
 import qualified Data.ByteString.Lazy.Char8     as BS
-import           Data.Foldable                  (for_)
+import           Data.Traversable               (for)
 import           Playground.Files               (makeWorkspaceDir, procBS)
-import           Playground.Pool                (makeWorkspacePool)
 import           Playground.Types.Docker        (Docker (..), DockerEnv (..),
                                                  DockerImage (..),
                                                  DockerImagePath (..))
 import           Playground.Types.GhcVersion    (GhcPath (MkGhcPath),
                                                  GhcVer (..))
 import           Playground.Types.OptLevel      (OptLevel, selectOptimisation)
-import           Playground.Types.Script        (Script, ScriptsDir (..),
-                                                 selectScript)
+import           Playground.Types.Script        (Script, selectScript)
 import           Playground.Types.StartupConfig (StartupConfig (..))
 import           Playground.Types.Timeout       (Timeout (..))
 import           Playground.Types.Workspace     (RuntimeDir,
                                                  Workspace (MkWorkspace),
-                                                 getVolumeName, getWorkspaceDir)
+                                                 getVolumeName)
 import           System.Process.Typed           (ProcessConfig,
                                                  readProcessStdout, runProcess)
 
 runDockerCommand :: Docker -> [ByteString] -> ProcessConfig () () ()
 runDockerCommand (MkDocker d) args = procBS d args
 
-makeDockerVolume :: Docker -> Workspace -> IO ()
-makeDockerVolume docker n = void do
+makeDockerVolume :: Docker -> Workspace -> IO ByteString
+makeDockerVolume docker n = do
   let
+    volumeName = getVolumeName n
     command =
       runDockerCommand docker
         [ "volume", "create"
         , "--opt", "type=tmpfs"
         , "--opt", "device=tmpfs"
         , "--opt", "o=size=128m"
-        , getVolumeName n
+        , volumeName
         ]
-  runProcess command
+  void $ runProcess command
+  pure volumeName
 
 dockerLoadImage :: Docker -> DockerImagePath -> IO DockerImage
 dockerLoadImage docker (MkDockerImagePath path) = do
@@ -52,22 +52,21 @@ dockerLoadImage docker (MkDockerImagePath path) = do
   (_, output) <- readProcessStdout command
   pure . MkDockerImage . last . BS.words . last . BS.lines $ output
 
-runDocker :: Monad m => Script -> OptLevel -> GhcVer -> Workspace -> ReaderT DockerEnv m (ProcessConfig () () ())
-runDocker script optLevel ghc w = do
+runDocker :: Monad m => Script -> OptLevel -> GhcVer -> ReaderT DockerEnv m (ProcessConfig () () ())
+runDocker script optLevel ghc = do
   MkDockerEnv{..} <- ask
-  let
-    MkScriptsDir sd = scriptsDir
 
+  let
     MkDockerImage img = dockerImage
 
   MkGhcPath ghcPath <- askGhcPath ghc
 
   pure $ runDockerCommand docker
     [ "run", "-i", "--rm"
-    , "--mount", "type=bind,src=" <> sd <> ",dst=/scripts,ro=1"
-    , "--mount", "type=bind,src=" <> getWorkspaceDir w runtimeDir <> ",dst=/data,ro=1"
+    , "--mount", "type=bind,src=" <> scriptsDir <> ",dst=/scripts,ro=1"
+    , "--mount", "type=bind,src=" <> workspaceDir <> ",dst=/data,ro=1"
     , "--mount", "type=tmpfs,dst=/tmp"
-    , "--mount", "type=volume,src=" <> getVolumeName w <> ",target=/compilation"
+    , "--mount", "type=volume,src=" <> volumeName <> ",target=/compilation"
     , "--read-only"
     , "-m", "512MB"
     , "--cpus", "2"
@@ -78,15 +77,15 @@ runDocker script optLevel ghc w = do
     , selectScript script, showTimeout timeout, selectOptimisation optLevel
     ]
 
-initDockerEnv :: StartupConfig -> RuntimeDir -> IO DockerEnv
+initDockerEnv :: StartupConfig -> RuntimeDir -> IO [DockerEnv]
 initDockerEnv MkStartupConfig{..} runtimeDir = do
-  for_ [1 .. workersCount] \num -> do
-    makeDockerVolume docker (MkWorkspace num)
-    makeWorkspaceDir runtimeDir (MkWorkspace num)
-  workspacePool <- makeWorkspacePool workersCount
   dockerImage <- dockerLoadImage docker dockerImagePath
   let ghcPaths = [ghc1Path, ghc2Path, ghc3Path, ghc4Path]
-  pure MkDockerEnv{..}
+  for [1 .. workersCount] \num -> do
+    let w = MkWorkspace num
+    volumeName <- makeDockerVolume docker w
+    workspaceDir <- makeWorkspaceDir runtimeDir w
+    pure MkDockerEnv{..}
 
 askGhcPath :: Monad m => GhcVer -> ReaderT DockerEnv m GhcPath
 askGhcPath GHC1 = asks (head  . ghcPaths)
