@@ -134,3 +134,10 @@ executable playground-hs
 
   -- Base language which the package is written in.
   default-language: Haskell2010
+
+  ghc-options:
+    -threaded
+    -with-rtsopts=-N
+      -- a capability for each core
+    -with-rtsopts=-A128m
+      -- bigger arena
