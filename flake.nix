@@ -14,6 +14,10 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        globalPkgs = pkgs;
+
+        overrideHaskellPackages = hp:
+          hp.override { overrides = self: super: { mkDerivation = args: super.mkDerivation (args // { doCheck = false; doHaddock = false; }); }; };
 
         haskellPackages = pkgs.haskellPackages;
 
@@ -24,19 +28,27 @@
 
         genericPackages = pkgs: with pkgs;
           [ lens
-            wreq
+            effectful
+            conduit
+            streaming
+            aeson
+            lens-aeson
+            megaparsec
             typed-process
           ];
 
-        mkGhc = additionalPackages: ghcVer:
-          pkgs.haskell.packages.${ghcVer}.ghcWithPackages
-                (pkgs: genericPackages pkgs ++ additionalPackages pkgs);
+        mkGhcFrom = hp: hp.ghcWithPackages genericPackages;
 
-        mkGhcSimle = mkGhc  (_ : []);
-        ghc1 = mkGhcSimle "ghc8107";
-        ghc2 = mkGhcSimle "ghc902";
-        ghc3 = mkGhcSimle "ghc924";
-        ghc4 = mkGhcSimle "ghc942";
+        mkGhcFromScratch = ghcVer:
+          mkGhcFrom (overrideHaskellPackages pkgs.haskell.packages.${ghcVer});
+
+        mkGhcSimle = ghcVer:
+          mkGhcFrom pkgs.haskell.packages.${ghcVer};
+
+        ghc1 = mkGhcFromScratch "ghc8107";
+        ghc2 = mkGhcSimle       "ghc902";
+        ghc3 = mkGhcFromScratch "ghc924";
+        ghc4 = mkGhcFromScratch "ghc942";
 
         dockerImage = pkgs.dockerTools.buildLayeredImage {
           name = "playgroundhsenv";
