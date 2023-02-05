@@ -91,7 +91,6 @@ library
     , directory
     , envy
     , mtl
-    , resource-pool
     , split
     , stm
     , temporary
@@ -126,7 +125,7 @@ executable playground-hs
     , mtl
     , playground-hs
     , stm
-    , telegram-bot-simple
+    , telegram-bot-simple > 0.6
     , text
 
   -- Directories containing source files.

@@ -69,12 +69,11 @@
       in {
         packages.${packageName} =
           haskellPackages.callCabal2nix packageName self rec {
-            resource-pool = haskellPackages.callCabal2nix "resource-pool" (
-              builtins.fetchGit {
-                url = "https://github.com/qnikst/pool.git";
-                rev = "5b04d120057ba5ff3c00f7e41e6c5c1a1a3cc0fe";
-              }
-            ){};
+            telegram-bot-simple = haskellPackages.callHackageDirect {
+              pkg = "telegram-bot-simple";
+              ver = "0.6.2";
+              sha256 = "sha256-LiGw+ys9+bcy5EL+q5wS7UzwAqqtACHbNrV/GTkwWg4=";
+            } {};
           };
 
         defaultPackage = self.packages.${system}.${packageName};
@@ -144,7 +143,7 @@
             lzma
             zlib
           ];
-          inputsFrom = builtins.attrValues self.packages.${system};
+          inputsFrom = map (__getAttr "env") (__attrValues self.packages.${system});
         } // envVars 8 {compiler = {term = 2; kill = 3;}; prog = {term = 1; kill = 2;};});
       });
 }
