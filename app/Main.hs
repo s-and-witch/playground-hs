@@ -40,7 +40,6 @@ import           Telegram.Bot.Simple.UpdateParser (updateMessageText)
 main :: IO ()
 main = do
   e <- decodeEnv
-  print e
   case e of
     Left err -> putStrLn err
     Right startupConf@MkStartupConfig{tgToken} ->
