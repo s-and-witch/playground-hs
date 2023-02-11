@@ -9,4 +9,4 @@ newtype SessionResult = MkSessionResult { rawSessionResult :: ByteString }
 
 
 prettySessionResult :: SessionResult -> Text
-prettySessionResult = decodeUtf8With (\ _ _ -> Just '🤔') . BS.toStrict . rawSessionResult
+prettySessionResult = decodeUtf8With (\ _ _ -> Nothing) . BS.toStrict . rawSessionResult
