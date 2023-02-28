@@ -26,7 +26,7 @@ runBwrap script optLevel ghc workspaceDir = do
   MkGhcPath ghcPath <- askGhcPath ghc
 
   pure $ procBS "systemd-run" $
-    [ "--user", "--scope", "-q"
+    [ "--scope", "-q"
     , "-p", "MemoryAccounting=yes"
     , "-p", "MemoryMax=512M"
     , "--"

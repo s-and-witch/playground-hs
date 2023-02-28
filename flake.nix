@@ -114,9 +114,6 @@
               };
             };
             config = mkIf cfg.enable {
-              users.users.playground-hs = {
-                isSystemUser = true;
-              };
 
               systemd.services.playground-hs = {
                 wantedBy = [ "multi-user.target" ];
@@ -124,7 +121,6 @@
                     ExecStart = "${self.defaultPackage.${system}}/bin/playground-hs";
                     EnvironmentFile = cfg.envFile;
                     Environment = concatStringsSep " " (pkgs.lib.mapAttrsToList (name: value: name + "=" + value) (envVars cfg.workersCount cfg.timeout));
-                    User = "playground-hs";
                 };
               };
             };
