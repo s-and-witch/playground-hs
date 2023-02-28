@@ -1,10 +1,14 @@
 #!/bin/bash
 
-set -e
+. scripts/common
 
-read -ra TIMEOUT <<< "$1"
+timeout -k "${TIMEOUT[0]}" "${TIMEOUT[1]}" \
+  $GHC -o kek Main.hs $2 \
+  -ddump-simpl \
+  -dsuppress-all \
+  -dno-suppress-type-signatures \
+  -dsuppress-uniques \
+  -dppr-case-as-let \
+  -ddump-to-file
 
-cp data/Main.hs compilation
-cd compilation
-timeout -k "${TIMEOUT[0]}" "${TIMEOUT[1]}" $GHC -o kek Main.hs $2 -ddump-simpl -dsuppress-all -dno-suppress-type-signatures -dsuppress-uniques -dppr-case-as-let -ddump-to-file
 cat Main.dump-simpl 1>&2

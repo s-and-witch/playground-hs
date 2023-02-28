@@ -19,7 +19,7 @@
         overrideHaskellPackages = hp:
           hp.override { overrides = self: super: { mkDerivation = args: super.mkDerivation (args // { doCheck = false; doHaddock = false; }); }; };
 
-        haskellPackages = pkgs.haskellPackages;
+        haskellPackages = pkgs.haskell.packages.ghc926;
 
         jailbreakUnbreak = pkg:
           pkgs.haskell.lib.doJailbreak (pkg.overrideAttrs (_: { meta = { }; }));
@@ -47,23 +47,21 @@
 
         ghc1 = mkGhcFromScratch "ghc8107";
         ghc2 = mkGhcSimle       "ghc902";
-        ghc3 = mkGhcFromScratch "ghc924";
-        ghc4 = mkGhcFromScratch "ghc942";
+        ghc3 = mkGhcSimle       "ghc926";
+        ghc4 = mkGhcFromScratch "ghc944";
 
-        dockerImage = pkgs.dockerTools.buildLayeredImage {
-          name = "playgroundhsenv";
-          contents = [ ghc1 ghc2 ghc3 ghc4 pkgs.bash pkgs.coreutils ];
-        };
+        ghcDeps = [ghc1 ghc2 ghc3 ghc4 pkgs.bash pkgs.coreutils];
 
         envVars = workers: timeout: with pkgs; {
           GHC1          = "${ghc1}/bin/ghc";
           GHC2          = "${ghc2}/bin/ghc";
           GHC3          = "${ghc3}/bin/ghc";
           GHC4          = "${ghc4}/bin/ghc";
-          DOCKER_IMAGE  = dockerImage;
+          BWRAP         = "${bubblewrap}/bin/bwrap";
+          # PRLIMIT       = "${util-linux}/bin/prlimit";
+          GHC_DEPS      = "${closureInfo { rootPaths = ghcDeps; }}/store-paths";
           SCRIPTS_DIR   = ./scripts;
           WORKERS_COUNT = toString workers;
-          DOCKER        = "${docker}/bin/docker";
           TIMEOUT       = "${toString timeout.compiler.term},${toString timeout.compiler.kill},${toString timeout.prog.term},${toString timeout.prog.kill}";
         };
       in {
@@ -117,11 +115,8 @@
             };
             config = mkIf cfg.enable {
               users.users.playground-hs = {
-                group = "docker";
                 isSystemUser = true;
               };
-
-              virtualisation.docker.enable = true;
 
               systemd.services.playground-hs = {
                 wantedBy = [ "multi-user.target" ];
@@ -130,7 +125,6 @@
                     EnvironmentFile = cfg.envFile;
                     Environment = concatStringsSep " " (pkgs.lib.mapAttrsToList (name: value: name + "=" + value) (envVars cfg.workersCount cfg.timeout));
                     User = "playground-hs";
-                    Group = "docker";
                 };
               };
             };

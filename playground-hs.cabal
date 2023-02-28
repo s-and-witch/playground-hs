@@ -53,6 +53,8 @@ extra-doc-files: CHANGELOG.md
 
 common warnings
   ghc-options: -Wall
+  default-extensions:
+    BlockArguments
 
 library
   -- Import common warning flags.
@@ -60,11 +62,11 @@ library
 
   -- Modules exported by the library.
   exposed-modules:
-    Playground.Docker
+    Playground.Bwrap
     Playground.Files
     Playground.Session
     Playground.TaskQueue
-    Playground.Types.Docker
+    Playground.Types.Bwrap
     Playground.Types.GhcVersion
     Playground.Types.OptLevel
     Playground.Types.Script
@@ -73,7 +75,6 @@ library
     Playground.Types.StartupConfig
     Playground.Types.TaskQueue
     Playground.Types.Timeout
-    Playground.Types.Workspace
     Playground.Utils
     Playground.Worker
 
@@ -86,16 +87,16 @@ library
   -- Other library packages from which modules are imported.
   build-depends:
     , async
-    , base           ^>=4.15.1.0
+    , base
     , bytestring
     , directory
     , envy
     , mtl
     , split
     , stm
-    , temporary
     , text
     , typed-process
+    , unliftio
 
   -- Directories containing source files.
   hs-source-dirs:   src
@@ -119,7 +120,7 @@ executable playground-hs
   -- Other library packages from which modules are imported.
   build-depends:
     , async
-    , base                 ^>=4.15.1.0
+    , base
     , bytestring
     , envy
     , mtl

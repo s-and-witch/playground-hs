@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns      #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Main where
 
@@ -17,8 +18,7 @@ import           Data.Maybe                       (fromJust)
 import           Data.Text                        (Text)
 import qualified Data.Text                        as T
 import           Data.Text.Encoding               (encodeUtf8)
-import           Playground.Docker                (initDockerEnv)
-import           Playground.Files                 (withPlaygroundRuntimeDir)
+import           Playground.Bwrap                (initBwrapEnv)
 import           Playground.TaskQueue             (newTaskQueue, pushTask)
 import           Playground.Types.GhcVersion      (GhcVer (..))
 import           Playground.Types.OptLevel        (OptLevel (..))
@@ -42,13 +42,16 @@ main = do
   e <- decodeEnv
   case e of
     Left err -> putStrLn err
-    Right startupConf@MkStartupConfig{tgToken} ->
-      withPlaygroundRuntimeDir \runtimeDir -> do
-        dockerEnvs <- initDockerEnv startupConf runtimeDir
-        putStrLn "Docker env initialized!"
-        tq <- newTaskQueue 100
-        let workers = raceAll_ (map (runWorker tq) dockerEnvs)
-        runTg tgToken tq `race_` workers
+    Right startupConf@MkStartupConfig{tgToken} -> do
+      bwrapEnvs <- initBwrapEnv startupConf
+      putStrLn "Bwrap env initialized!"
+      tq <- newTaskQueue 100
+      let
+        workers = raceAll_
+          (replicate
+            startupConf.workersCount
+            (runWorker tq bwrapEnvs))
+      runTg tgToken tq `race_` workers
 
 runTg :: Text -> TaskQueue SessionConfig SessionResult -> IO ()
 runTg token tq = do
