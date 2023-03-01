@@ -5,3 +5,4 @@ read -ra TIMEOUT <<< "$1"
 mkdir /tmp
 cp data/Main.hs /tmp
 cd /tmp
+export LANG=C.UTF-8
