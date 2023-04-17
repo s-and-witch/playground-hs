@@ -4,9 +4,10 @@
 
 module Playground.Types.Timeout where
 
-import           Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as BS
-import           System.Envy                (Var (..))
+import Data.ByteString.Lazy.Char8 (ByteString)
+import Data.ByteString.Lazy.Char8 qualified as BS
+
+import System.Envy                (Var (..))
 
 
 newtype Timeout = MkTimeout { showTimeout :: ByteString }

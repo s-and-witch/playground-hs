@@ -6,23 +6,35 @@
   description = "Playground to run haskell code in Telegram";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
+    nixpkgs2023-04-17.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs2023-04-17, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-        globalPkgs = pkgs;
+        pkgs2023-04-17 = nixpkgs2023-04-17.legacyPackages.${system};
+        globalPkgs = pkgs2023-04-17;
+
+        foldr1 = fun: list:
+          let
+            foldr = globalPkgs.lib.foldr;
+            nil = {arg = {}; first = true;};
+            fun' = head: {arg, first}:
+              if first
+                then {arg = head; first = false; }
+                else {arg = fun head arg; inherit first; };
+          in (x: x.arg) (foldr fun' nil list);
+
+        intercalate = sep: foldr1 (h: t: "${h}${sep}${t}" );
 
         overrideHaskellPackages = hp:
-          hp.override { overrides = self: super: { mkDerivation = args: super.mkDerivation (args // { doCheck = false; doHaddock = false; }); }; };
+          hp.override { overrides = self: super:
+            { mkDerivation = args: super.mkDerivation
+                (args // { doCheck = false; doHaddock = false; });
+            }; };
 
-        haskellPackages = pkgs.haskell.packages.ghc926;
-
-        jailbreakUnbreak = pkg:
-          pkgs.haskell.lib.doJailbreak (pkg.overrideAttrs (_: { meta = { }; }));
+        haskellPackages = globalPkgs.haskell.packages.ghc927;
 
         packageName = "playground-hs";
 
@@ -37,33 +49,44 @@
             typed-process
           ];
 
-        mkGhcFrom = hp: hp.ghcWithPackages genericPackages;
+        mkGhcFromScratchWith = pkgs: ghcVer: packageList:
+          let hp = overrideHaskellPackages (pkgs.haskell.packages.${ghcVer});
+          in hp.ghcWithPackages packageList;
 
-        mkGhcFromScratch = ghcVer:
-          mkGhcFrom (overrideHaskellPackages pkgs.haskell.packages.${ghcVer});
+        mkGhcSimle = pkgs: ghcVer:
+          pkgs.haskell.packages.${ghcVer}.ghcWithPackages genericPackages;
 
-        mkGhcSimle = ghcVer:
-          mkGhcFrom pkgs.haskell.packages.${ghcVer};
+        mkGhcFromScratch = pkgs: ghcVer:
+          mkGhcFromScratchWith pkgs ghcVer genericPackages;
 
-        ghc1 = mkGhcFromScratch "ghc8107";
-        ghc2 = mkGhcSimle       "ghc902";
-        ghc3 = mkGhcSimle       "ghc926";
-        ghc4 = mkGhcFromScratch "ghc944";
-
-        ghcDeps = [ghc1 ghc2 ghc3 ghc4 pkgs.bash pkgs.coreutils];
-
-        envVars = workers: timeout: with pkgs; {
-          GHC1          = "${ghc1}/bin/ghc";
-          GHC2          = "${ghc2}/bin/ghc";
-          GHC3          = "${ghc3}/bin/ghc";
-          GHC4          = "${ghc4}/bin/ghc";
-          BWRAP         = "${bubblewrap}/bin/bwrap";
-          # PRLIMIT       = "${util-linux}/bin/prlimit";
-          GHC_DEPS      = "${closureInfo { rootPaths = ghcDeps; }}/store-paths";
-          SCRIPTS_DIR   = ./scripts;
-          WORKERS_COUNT = toString workers;
-          TIMEOUT       = "${toString timeout.compiler.term},${toString timeout.compiler.kill},${toString timeout.prog.term},${toString timeout.prog.kill}";
+        ghcs = {
+          ghc8107 = mkGhcFromScratch     pkgs2023-04-17 "ghc8107";
+          ghc902  = mkGhcSimle           pkgs2023-04-17 "ghc902";
+          ghc927  = mkGhcSimle           pkgs2023-04-17 "ghc927";
+          ghc944  = mkGhcFromScratch     pkgs2023-04-17 "ghc944";
+          ghc961  = mkGhcFromScratchWith pkgs2023-04-17 "ghc961" (_: []);
         };
+
+        ghcDeps =  builtins.attrValues ghcs ++ [globalPkgs.bash globalPkgs.coreutils];
+
+        envVars = {workers ? 8, timeout ? defaultTO, workDir ? "/usr/share/plaground-hs" }:
+          with globalPkgs;
+            ( builtins.mapAttrs (key: val: "${val}/bin/ghc" ) ghcs ) //
+            {
+              GHCS          = intercalate "," (builtins.attrNames ghcs);
+              DEFAULT_GHC   = ghcs.ghc927;
+              BWRAP         = "${bubblewrap}/bin/bwrap";
+              GHC_DEPS      = "${closureInfo { rootPaths = ghcDeps; }}/store-paths";
+              SCRIPTS_DIR   = ./scripts;
+              WORK_DIR      = workDir;
+              WORKERS_COUNT = toString workers;
+              TIMEOUT       = intercalate ","  (map (x: toString x) (timeoutToList timeout));
+            };
+
+        timeoutToList = timeout:
+          [ timeout.compiler.term timeout.compiler.kill timeout.prog.term timeout.prog.kill ];
+        defaultTO = {compiler = {term = 2; kill = 3;}; prog = {term = 1; kill = 2;};};
+
       in {
         packages.${packageName} =
           haskellPackages.callCabal2nix packageName self rec {
@@ -74,9 +97,11 @@
             } {};
           };
 
+        legacyPackages = globalPkgs;
+
         defaultPackage = self.packages.${system}.${packageName};
 
-        nixosModules.default = with pkgs.lib; { config, ... }:
+        nixosModules.default = with globalPkgs.lib; { config, ... }:
           let cfg = config.services.playground-hs;
           in
           {
@@ -89,6 +114,10 @@
               workersCount = mkOption {
                 type = types.int;
                 default = 8;
+              };
+              workDir = mkOption {
+                type = types.string;
+                default = "/usr/share/playground-hs";
               };
               timeout = {
                 compiler = {
@@ -120,13 +149,19 @@
                 serviceConfig = {
                     ExecStart = "${self.defaultPackage.${system}}/bin/playground-hs";
                     EnvironmentFile = cfg.envFile;
-                    Environment = concatStringsSep " " (pkgs.lib.mapAttrsToList (name: value: name + "=" + value) (envVars cfg.workersCount cfg.timeout));
+                    Environment = concatStringsSep " "
+                      (globalPkgs.lib.mapAttrsToList (name: value: name + "=" + value)
+                      (envVars
+                        { workers = cfg.workersCount;
+                          timeout = cfg.timeout;
+                          workDir = cfg.workDir;
+                        }));
                 };
               };
             };
           };
-        devShell = pkgs.mkShell ({
-          buildInputs = with pkgs; [
+        devShell = globalPkgs.mkShell ({
+          buildInputs = with globalPkgs; [
             haskellPackages.haskell-language-server # you must build it with your ghc to work
             ghc
             cabal-install
@@ -134,6 +169,6 @@
             zlib
           ];
           inputsFrom = map (__getAttr "env") (__attrValues self.packages.${system});
-        } // envVars 8 {compiler = {term = 2; kill = 3;}; prog = {term = 1; kill = 2;};});
+        } // envVars {});
       });
 }

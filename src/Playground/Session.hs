@@ -4,16 +4,18 @@
 
 module Playground.Session where
 
-import           Control.Monad.Reader           (MonadIO (liftIO), ReaderT)
-import qualified Data.ByteString.Lazy.Char8     as BS
-import           Playground.Bwrap              (runBwrap)
-import           Playground.Files               (mkFilePath, withWorkspaceDir)
-import           Playground.Types.Bwrap         ( BwrapEnv )
-import           Playground.Types.SessionConfig (SessionConfig (..))
-import           Playground.Types.SessionResult (SessionResult (MkSessionResult))
-import           System.Directory               (removeFile)
-import           System.Process.Typed           (ExitCode (..),
-                                                 readProcessStderr)
+import Control.Monad.Reader           (MonadIO (liftIO), ReaderT)
+
+import Data.ByteString.Lazy.Char8     qualified as BS
+
+import Playground.Bwrap               (runBwrap)
+import Playground.Files               (mkFilePath, withWorkspaceDir)
+import Playground.Types.Bwrap         (BwrapEnv)
+import Playground.Types.SessionConfig (SessionConfig (..))
+import Playground.Types.SessionResult (SessionResult (MkSessionResult))
+
+import System.Directory               (removeFile)
+import System.Process.Typed           (ExitCode (..), readProcessStderr)
 
 
 runPlaygroundSession :: SessionConfig -> ReaderT BwrapEnv IO SessionResult
@@ -23,7 +25,7 @@ runPlaygroundSession MkSessionConfig{..} = withWorkspaceDir \workspaceDir -> do
 
   liftIO $ BS.writeFile (mkFilePath filename) content
 
-  command <- runBwrap script optLevel ghcVersion workspaceDir
+  command <- runBwrap script optLevel ghcPath workspaceDir
   (errCode, output) <- readProcessStderr command
 
   liftIO $ removeFile (mkFilePath filename)

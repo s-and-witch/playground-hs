@@ -1,24 +1,29 @@
-{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE BlockArguments  #-}
+{-# LANGUAGE NamedFieldPuns  #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Playground.TaskQueue where
 
-import           Control.Concurrent.STM
-import           Control.Exception          (throwIO, try)
-import           GHC.Natural                (Natural)
-import           Playground.Types.TaskQueue (TaskCallback (..), TaskQueue (..))
+import Control.Concurrent.STM     (STM, atomically, newTBQueueIO, readTBQueue,
+                                   writeTBQueue)
+import Control.Exception          (SomeException, try)
 
-pushTask :: TaskQueue arg res -> arg -> STM (IO res)
-pushTask (MkTaskQueue queue) val = do
-  callback <- newEmptyTMVar
-  writeTBQueue queue (val, MkTaskCallback callback)
-  pure $ (atomically (takeTMVar callback)) >>= either throwIO pure
+import GHC.Natural                (Natural)
 
-newTaskQueue :: Natural -> IO (TaskQueue argument result)
-newTaskQueue = (fmap . fmap) MkTaskQueue newTBQueueIO
+import Playground.Types.TaskQueue (TaskQueue (..))
 
-readTaskQueue :: TaskQueue arg res -> IO (arg, TaskCallback res)
-readTaskQueue (MkTaskQueue queue) = atomically $ readTBQueue queue
+pushTask :: TaskQueue arg res -> arg -> STM ()
+pushTask (MkTaskQueue queue _) val = do
+  writeTBQueue queue (val)
 
-returnTaskResult :: TaskCallback res -> IO res -> IO ()
-returnTaskResult (MkTaskCallback callback) action =
-  try action >>= atomically . putTMVar callback
+newTaskQueue :: Natural -> (Either SomeException result -> IO ()) -> IO (TaskQueue argument result)
+newTaskQueue count callBack = do
+  queue <- newTBQueueIO count
+  pure MkTaskQueue{..}
+
+readTaskQueue :: TaskQueue arg res -> IO arg
+readTaskQueue (MkTaskQueue{queue}) = atomically $ readTBQueue queue
+
+returnTaskResult :: TaskQueue arg res -> IO res -> IO ()
+returnTaskResult (MkTaskQueue {callBack}) action =
+  try action >>=  callBack

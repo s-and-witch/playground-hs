@@ -1,8 +1,10 @@
 module Playground.Files where
 
-import           Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as BS
-import           System.Process.Typed       (ProcessConfig, proc)
+import Data.ByteString.Lazy.Char8 (ByteString)
+import Data.ByteString.Lazy.Char8 qualified as BS
+
+import System.Process.Typed       (ProcessConfig, proc)
+
 import UnliftIO
 
 

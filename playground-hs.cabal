@@ -52,9 +52,8 @@ extra-doc-files: CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-  ghc-options: -Wall
-  default-extensions:
-    BlockArguments
+  ghc-options:        -Wall
+  default-extensions: BlockArguments
 
 library
   -- Import common warning flags.
@@ -64,10 +63,12 @@ library
   exposed-modules:
     Playground.Bwrap
     Playground.Files
+    Playground.IdStorage
     Playground.Session
     Playground.TaskQueue
     Playground.Types.Bwrap
     Playground.Types.GhcVersion
+    Playground.Types.IdStorage
     Playground.Types.OptLevel
     Playground.Types.Script
     Playground.Types.SessionConfig
@@ -86,15 +87,21 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:
+    , acid-state
     , async
     , base
     , bytestring
+    , containers
     , directory
     , envy
+    , filepath
     , mtl
+    , safecopy
     , split
     , stm
+    , telegram-bot-simple
     , text
+    , time
     , typed-process
     , unliftio
 
@@ -102,7 +109,7 @@ library
   hs-source-dirs:   src
 
   -- Base language which the package is written in.
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable playground-hs
   -- Import common warning flags.
@@ -119,25 +126,25 @@ executable playground-hs
 
   -- Other library packages from which modules are imported.
   build-depends:
+    , acid-state
     , async
     , base
     , bytestring
+    , containers
     , envy
     , mtl
     , playground-hs
     , stm
-    , telegram-bot-simple > 0.6
+    , telegram-bot-simple  >=0.6.0
     , text
+    , time
 
   -- Directories containing source files.
   hs-source-dirs:   app
 
   -- Base language which the package is written in.
-  default-language: Haskell2010
+  default-language: GHC2021
+  ghc-options:      -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-A128m
 
-  ghc-options:
-    -threaded
-    -with-rtsopts=-N
-      -- a capability for each core
-    -with-rtsopts=-A128m
-      -- bigger arena
+-- a capability for each core
+-- bigger arena

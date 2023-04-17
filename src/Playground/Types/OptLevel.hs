@@ -2,7 +2,7 @@
 
 module Playground.Types.OptLevel where
 
-import           Data.ByteString.Lazy.Char8 (ByteString)
+import Data.ByteString.Lazy.Char8 (ByteString)
 
 data OptLevel = O0 | O1 | O2
   deriving Show

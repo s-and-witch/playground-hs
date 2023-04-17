@@ -4,7 +4,7 @@
 
 module Playground.Types.Script where
 
-import           Data.ByteString.Lazy.Char8 (ByteString)
+import Data.ByteString.Lazy.Char8 (ByteString)
 
 data Script = Run | Core
   deriving Show

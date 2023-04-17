@@ -4,26 +4,25 @@
 
 module Playground.Bwrap where
 
-import           Control.Monad.Reader           (MonadReader (ask), ReaderT,
-                                                 asks)
-import           Data.ByteString.Lazy.Char8     (ByteString)
-import qualified Data.ByteString.Lazy.Char8     as BS
-import           Playground.Files               (procBS, mkFilePath)
-import           Playground.Types.Bwrap         (BwrapEnv (..))
-import           Playground.Types.GhcVersion    (GhcPath (MkGhcPath),
-                                                 GhcVer (..))
-import           Playground.Types.OptLevel      (OptLevel, selectOptimisation)
-import           Playground.Types.Script        (Script, selectScript)
-import           Playground.Types.StartupConfig (StartupConfig (..))
-import           Playground.Types.Timeout       (Timeout (..))
-import           System.Process.Typed           (ProcessConfig)
+import Control.Monad.Reader           (MonadReader (ask), ReaderT)
+
+import Data.ByteString.Lazy.Char8     (ByteString)
+import Data.ByteString.Lazy.Char8     qualified as BS
+
+import Playground.Files               (mkFilePath, procBS)
+import Playground.Types.Bwrap         (BwrapEnv (..))
+import Playground.Types.GhcVersion    (GhcPath (..))
+import Playground.Types.OptLevel      (OptLevel, selectOptimisation)
+import Playground.Types.Script        (Script, selectScript)
+import Playground.Types.StartupConfig (StartupConfig (..))
+import Playground.Types.Timeout       (Timeout (..))
+
+import System.Process.Typed           (ProcessConfig)
 
 
-runBwrap :: Monad m => Script -> OptLevel -> GhcVer -> ByteString ->  ReaderT BwrapEnv m (ProcessConfig () () ())
-runBwrap script optLevel ghc workspaceDir = do
+runBwrap :: Monad m => Script -> OptLevel -> GhcPath -> ByteString ->  ReaderT BwrapEnv m (ProcessConfig () () ())
+runBwrap script optLevel (MkGhcPath ghcPath) workspaceDir = do
   MkBwrapEnv{..} <- ask
-
-  MkGhcPath ghcPath <- askGhcPath ghc
 
   pure $ procBS "systemd-run" $
     [ "--scope", "-q"
@@ -56,12 +55,5 @@ makePath = BS.intercalate ":" . map (<> "/bin")
 
 initBwrapEnv :: StartupConfig -> IO BwrapEnv
 initBwrapEnv MkStartupConfig{..} = do
-  let ghcPaths = [ghc1Path, ghc2Path, ghc3Path, ghc4Path]
   runtimeDeps <- BS.lines <$> BS.readFile (mkFilePath ghcDeps)
   pure MkBwrapEnv{..}
-
-askGhcPath :: Monad m => GhcVer -> ReaderT BwrapEnv m GhcPath
-askGhcPath GHC1 = asks (head  . ghcPaths)
-askGhcPath GHC2 = asks ((!!1) . ghcPaths)
-askGhcPath GHC3 = asks ((!!2) . ghcPaths)
-askGhcPath GHC4 = asks ((!!3) . ghcPaths)
