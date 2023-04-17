@@ -10,11 +10,10 @@
 {-# LANGUAGE ViewPatterns               #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Main where
 
-import Control.Applicative              (optional)
+import Control.Applicative              (optional, Alternative ((<|>)))
 import Control.Concurrent
 import Control.Concurrent.STM           (atomically)
 import Control.Exception
@@ -46,9 +45,8 @@ import Playground.Worker                (runWorker)
 import System.Envy                      (decodeEnv)
 
 import Telegram.Bot.API
-import Telegram.Bot.Simple hiding (editMessageText)
+import Telegram.Bot.Simple
 import Telegram.Bot.Simple.UpdateParser (updateMessageText)
-import Control.Monad (void)
 
 main :: IO ()
 main = do
@@ -100,10 +98,9 @@ runTg idStorage defPath getPath token tq = do
     updateToAction update _ = case updateMessageText update of
       Just t
         | Just c <- transform <$> T.stripPrefix "/runhaskell" t
-        , Just msgId <- update.updateMessage.messageMessageId
-        , Just chatId <- update.updateMessage.messageChat.chatId
-          -> Just (RunCommand msgId chatId c)
-      _      -> Nothing
+        , Just msg <- update.updateMessage <|> update.updateEditedMessage
+          -> Just (RunCommand msg.messageMessageId msg.messageChat.chatId c)
+      _   -> Nothing
 
     transform t = let
       scripts = [("core", Core), ("run", Run)]
@@ -126,31 +123,17 @@ runTg idStorage defPath getPath token tq = do
 
     handleAction :: Action -> Model -> Eff Action Model
     handleAction (RunCommand userMsgId chatId action) model = model <# do
-      void $ makePlaceholder idStorage userMsgId chatId
-      res <- liftIO $ atomically (optional $ pushTask tq ((userMsgId, chatId), action))
+      botMsg <- makePlaceholder idStorage userMsgId chatId
+      res <- liftIO $ atomically (optional $ pushTask tq ((botMsg, chatId), action))
       case res of
         Nothing -> replyText "The server is busy now, please try later!"
         Just () -> do
           pure ()
 
-    handleAction (AnswerToUser userMsgId chatId result) model = model <# do
-      mplaceholder <- liftIO $ lookupStorage userMsgId chatId idStorage
-      case mplaceholder of
-        Nothing -> liftIO $ putStrLn "Can't find placeholder"
-        Just botMsgId -> do
-          let msgId = messageMessageId . (\(EditedMessage m) -> m) . responseResult
-          msg <- fmap msgId $ liftClientM $ editMessageText EditMessageTextRequest
-            {
-              editMessageTextChatId = Just (SomeChatId chatId),
-              editMessageTextMessageId = Just botMsgId,
-              editMessageTextText = prettySessionResult result,
-              editMessageTextParseMode = Nothing,
-              editMessageTextInlineMessageId = Nothing,
-              editMessageEntities = Nothing,
-              editMessageTextDisableWebPagePreview = Nothing,
-              editMessageTextReplyMarkup = Nothing
-            }
-          liftIO $ updateStorage userMsgId chatId msg idStorage
+    handleAction (AnswerToUser botMsgId chatId result) model = model <# do
+      editMessage
+        (EditChatMessageId (SomeChatId chatId) botMsgId)
+        (toEditMessage $ prettySessionResult result)
 
 makePlaceholder :: AcidState IdStorage -> MessageId -> ChatId -> BotM MessageId
 makePlaceholder idStorage userMsg chatId = do
@@ -163,7 +146,7 @@ makePlaceholder idStorage userMsg chatId = do
       pure botMsg
 
 replyToUser :: MessageId -> ChatId -> Text -> BotM MessageId
-replyToUser msgId chatId content =  fmap getMsgId $ liftClientM
+replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ liftClientM
   (sendMessage SendMessageRequest
   { sendMessageChatId = SomeChatId chatId
   , sendMessageText = content
@@ -175,8 +158,8 @@ replyToUser msgId chatId content =  fmap getMsgId $ liftClientM
   , sendMessageReplyToMessageId = Just msgId
   , sendMessageAllowSendingWithoutReply = Nothing
   , sendMessageReplyMarkup = Nothing
-  }) where
-  getMsgId = messageMessageId . responseResult
+  })
+
 
 type Model = ()
 

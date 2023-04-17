@@ -116,7 +116,7 @@
                 default = 8;
               };
               workDir = mkOption {
-                type = types.string;
+                type = types.str;
                 default = "/usr/share/playground-hs";
               };
               timeout = {
@@ -169,6 +169,6 @@
             zlib
           ];
           inputsFrom = map (__getAttr "env") (__attrValues self.packages.${system});
-        } // envVars {});
+        } // envVars { workDir = "id-storage"; });
       });
 }
