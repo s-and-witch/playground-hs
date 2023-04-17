@@ -1,6 +1,4 @@
-{-# LANGUAGE BlockArguments    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
 
 module Playground.Bwrap where
 

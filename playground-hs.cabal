@@ -53,7 +53,13 @@ extra-doc-files: CHANGELOG.md
 
 common warnings
   ghc-options:        -Wall
-  default-extensions: BlockArguments
+  default-extensions:
+    BlockArguments
+    DerivingStrategies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    OverloadedRecordDot
+    RecordWildCards
 
 library
   -- Import common warning flags.

@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 module Playground.Types.StartupConfig where
 
 import Data.ByteString.Lazy.Char8  (ByteString)

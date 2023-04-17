@@ -1,15 +1,6 @@
-{-# LANGUAGE BlockArguments             #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE OverloadedRecordDot        #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecursiveDo                #-}
-{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE ViewPatterns               #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE UndecidableInstances       #-}
 
 module Main where
 

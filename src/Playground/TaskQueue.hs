@@ -1,6 +1,3 @@
-{-# LANGUAGE BlockArguments  #-}
-{-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Playground.TaskQueue where
 

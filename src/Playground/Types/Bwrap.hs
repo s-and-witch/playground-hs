@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Playground.Types.Bwrap where
 
 import Data.ByteString.Lazy.Char8 (ByteString)

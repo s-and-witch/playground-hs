@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments #-}
 module Playground.Worker where
 
 import Control.Monad                  (forever)

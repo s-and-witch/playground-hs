@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeFamilies       #-}
 
@@ -11,7 +10,6 @@ import Data.Acid
 import Data.Map.Strict      qualified as Map
 import Data.SafeCopy
 import Data.Time
-import Data.Typeable
 
 ------------------------------------------------------
 -- The Haskell structure that we want to encapsulate
@@ -20,7 +18,6 @@ type Key = (Int, Int)
 type Value = (Int, UTCTime)
 
 data IdStorage = IdStorage !(Map.Map Key Value)
-    deriving (Typeable)
 
 emptyStorage :: IdStorage
 emptyStorage = IdStorage Map.empty
