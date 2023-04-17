@@ -10,6 +10,7 @@
 {-# LANGUAGE ViewPatterns               #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Main where
 
@@ -45,8 +46,9 @@ import Playground.Worker                (runWorker)
 import System.Envy                      (decodeEnv)
 
 import Telegram.Bot.API
-import Telegram.Bot.Simple
+import Telegram.Bot.Simple hiding (editMessageText)
 import Telegram.Bot.Simple.UpdateParser (updateMessageText)
+import Control.Monad (void)
 
 main :: IO ()
 main = do
@@ -124,17 +126,31 @@ runTg idStorage defPath getPath token tq = do
 
     handleAction :: Action -> Model -> Eff Action Model
     handleAction (RunCommand userMsgId chatId action) model = model <# do
-      botMsg <- makePlaceholder idStorage userMsgId chatId
-      res <- liftIO $ atomically (optional $ pushTask tq ((botMsg, chatId), action))
+      void $ makePlaceholder idStorage userMsgId chatId
+      res <- liftIO $ atomically (optional $ pushTask tq ((userMsgId, chatId), action))
       case res of
         Nothing -> replyText "The server is busy now, please try later!"
         Just () -> do
           pure ()
 
-    handleAction (AnswerToUser botMsgId chatId result) model = model <# do
-      editMessage
-        (EditChatMessageId (SomeChatId chatId) botMsgId)
-        (toEditMessage $ prettySessionResult result)
+    handleAction (AnswerToUser userMsgId chatId result) model = model <# do
+      mplaceholder <- liftIO $ lookupStorage userMsgId chatId idStorage
+      case mplaceholder of
+        Nothing -> liftIO $ putStrLn "Can't find placeholder"
+        Just botMsgId -> do
+          let msgId = messageMessageId . (\(EditedMessage m) -> m) . responseResult
+          msg <- fmap msgId $ liftClientM $ editMessageText EditMessageTextRequest
+            {
+              editMessageTextChatId = Just (SomeChatId chatId),
+              editMessageTextMessageId = Just botMsgId,
+              editMessageTextText = prettySessionResult result,
+              editMessageTextParseMode = Nothing,
+              editMessageTextInlineMessageId = Nothing,
+              editMessageEntities = Nothing,
+              editMessageTextDisableWebPagePreview = Nothing,
+              editMessageTextReplyMarkup = Nothing
+            }
+          liftIO $ updateStorage userMsgId chatId msg idStorage
 
 makePlaceholder :: AcidState IdStorage -> MessageId -> ChatId -> BotM MessageId
 makePlaceholder idStorage userMsg chatId = do
@@ -143,11 +159,11 @@ makePlaceholder idStorage userMsg chatId = do
     Just msg -> pure msg
     Nothing -> do
       botMsg <- replyToUser userMsg chatId "Got it!"
-      liftIO $ inserStorage userMsg chatId botMsg idStorage
+      liftIO $ insertStorage userMsg chatId botMsg idStorage
       pure botMsg
 
 replyToUser :: MessageId -> ChatId -> Text -> BotM MessageId
-replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ liftClientM
+replyToUser msgId chatId content =  fmap getMsgId $ liftClientM
   (sendMessage SendMessageRequest
   { sendMessageChatId = SomeChatId chatId
   , sendMessageText = content
@@ -159,8 +175,8 @@ replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ 
   , sendMessageReplyToMessageId = Just msgId
   , sendMessageAllowSendingWithoutReply = Nothing
   , sendMessageReplyMarkup = Nothing
-  })
-
+  }) where
+  getMsgId = messageMessageId . responseResult
 
 type Model = ()
 

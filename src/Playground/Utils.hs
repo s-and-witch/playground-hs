@@ -12,5 +12,4 @@ raceAll_ (x:xs) = race_ x (raceAll_ xs)
 
 
 instance (HasField t a b) => HasField t (Maybe a) (Maybe b) where
-  getField Nothing = Nothing
-  getField (Just a) = Just (getField @t a)
+  getField = fmap (getField @t)

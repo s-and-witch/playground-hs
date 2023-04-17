@@ -74,7 +74,7 @@
             ( builtins.mapAttrs (key: val: "${val}/bin/ghc" ) ghcs ) //
             {
               GHCS          = intercalate "," (builtins.attrNames ghcs);
-              DEFAULT_GHC   = ghcs.ghc927;
+              DEFAULT_GHC   = "${ghcs.ghc927}/bin/ghc";
               BWRAP         = "${bubblewrap}/bin/bwrap";
               GHC_DEPS      = "${closureInfo { rootPaths = ghcDeps; }}/store-paths";
               SCRIPTS_DIR   = ./scripts;
