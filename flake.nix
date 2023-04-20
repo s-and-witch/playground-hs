@@ -51,7 +51,7 @@
             massiv
             generic-lens
             vector-algorithms
-            Frames
+            vinyl
           ];
 
         mkGhcFromScratchWith = pkgs: ghcVer: packageList:
