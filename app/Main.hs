@@ -38,6 +38,8 @@ import System.Envy                      (decodeEnv)
 import Telegram.Bot.API
 import Telegram.Bot.Simple
 import Telegram.Bot.Simple.UpdateParser (updateMessageText)
+import Control.Monad (void)
+import qualified Data.Text.Encoding as T
 
 main :: IO ()
 main = do
@@ -49,7 +51,13 @@ main = do
       bwrapEnvs <- initBwrapEnv startupConf
       putStrLn "Bwrap env initialized!"
       tq <- newTaskQueue 100 cbWrapped
-      cb <- runTg idStorage startupConf.ghcDefault (startupConf.ghcMap Map.!?) tgToken tq
+      cb <- runTg
+        idStorage
+        startupConf.ghcDefault
+        (Map.keys startupConf.ghcMap)
+        (startupConf.ghcMap Map.!?)
+        tgToken
+        tq
       cbWrapped <- wrapCallBack cb
       let
         workers = raceAll_
@@ -68,11 +76,12 @@ wrapCallBack callback = do
 runTg
   :: AcidState IdStorage
   -> GhcPath
+  -> [BS.ByteString]
   -> (BS.ByteString -> Maybe GhcPath)
   -> Text
   -> TaskQueue ((MessageId, ChatId), SessionConfig) ((MessageId, ChatId), SessionResult)
   -> IO (Action -> IO ())
-runTg idStorage defPath getPath token tq = do
+runTg idStorage defPath ghcNames getPath token tq = do
   env <- defaultTelegramClientEnv (Token token)
   startBotAsync echoBot env
   where
@@ -91,6 +100,10 @@ runTg idStorage defPath getPath token tq = do
         | Just c <- transform <$> T.stripPrefix "/runhaskell" t
         , Just msg <- update.updateMessage <|> update.updateEditedMessage
           -> Just (RunCommand msg.messageMessageId msg.messageChat.chatId c)
+      Just t
+        | T.isPrefixOf "/help_haskell" t
+        , Just msg <- update.updateMessage <|> update.updateEditedMessage
+          -> Just (HelpCommand msg.messageMessageId msg.messageChat.chatId)
       _   -> Nothing
 
     transform t = let
@@ -122,21 +135,49 @@ runTg idStorage defPath getPath token tq = do
           pure ()
 
     handleAction (AnswerToUser botMsgId chatId result) model = model <# do
-      editMessage
-        (EditChatMessageId (SomeChatId chatId) botMsgId)
-        (toEditMessage $ wrapMonospace (prettySessionResult result))
-          { editMessageParseMode = Just MarkdownV2
-          }
+      editMsg botMsgId chatId (prettySessionResult result)
+
+
+    handleAction (HelpCommand userId chatId) model = model <# do
+      m_msg <- liftIO $ lookupStorage userId chatId idStorage
+      case m_msg of
+        Nothing -> void $ registerNewReply idStorage userId chatId helpText
+        Just msg -> editMsg msg chatId helpText
+      where
+        helpText = T.unlines
+          [ "Runhaskell Bot - interactive haskell playground in Telegram"
+          , ""
+          , "/runhaskell <options>"
+          , "<code>"
+          , "Command to compile and run the code from message"
+          , "Available options:"
+          , "- `run` or `core` - run the code or generate it's core output"
+          , "- `O0`, `O1`, `O2` - optimisation levels (default - O0)"
+          , "- " <> ghcs
+          , ""
+          , "/help_haskell - show this message"
+          , "Tips:"
+          , "- It's highly recommended to edit your message instead of typing the new one"
+          , "- There are a lot of libraries available like `massiv`, `lens` or `conduit`"
+          , ""
+          , "source code: https://github.com/s-and-witch/playground-hs/"
+          ]
+
+        ghcs = T.intercalate ", " (map (wrapQuotes . T.decodeUtf8 . BS.toStrict) ghcNames)
+        wrapQuotes t = "`" <> t <> "`"
 
 makePlaceholder :: AcidState IdStorage -> MessageId -> ChatId -> BotM MessageId
 makePlaceholder idStorage userMsg chatId = do
   m_msg <- liftIO $ lookupStorage userMsg chatId idStorage
   case m_msg of
     Just msg -> pure msg
-    Nothing -> do
-      botMsg <- replyToUser userMsg chatId "Got it!"
-      liftIO $ insertStorage userMsg chatId botMsg idStorage
-      pure botMsg
+    Nothing -> registerNewReply idStorage userMsg chatId "Got it!"
+
+registerNewReply :: AcidState IdStorage -> MessageId -> ChatId -> Text -> BotM MessageId
+registerNewReply idStorage userMsg chatId content = do
+  botMsg <- replyToUser userMsg chatId content
+  liftIO $ insertStorage userMsg chatId botMsg idStorage
+  pure botMsg
 
 replyToUser :: MessageId -> ChatId -> Text -> BotM MessageId
 replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ liftClientM
@@ -153,6 +194,13 @@ replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ 
   , sendMessageReplyMarkup = Nothing
   })
 
+editMsg :: MessageId -> ChatId -> Text -> BotM ()
+editMsg msgId chatId content =
+      editMessage
+        (EditChatMessageId (SomeChatId chatId) msgId)
+        (toEditMessage $ wrapMonospace content)
+          { editMessageParseMode = Just MarkdownV2
+          }
 
 wrapMonospace :: Text -> Text
 wrapMonospace content = "```\n" <> content <> "\n```"
@@ -162,3 +210,4 @@ type Model = ()
 data Action
   = RunCommand MessageId ChatId SessionConfig
   | AnswerToUser MessageId ChatId SessionResult
+  | HelpCommand  MessageId ChatId
