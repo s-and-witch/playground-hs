@@ -47,6 +47,11 @@
             lens-aeson
             megaparsec
             typed-process
+            foldl
+            massiv
+            generic-lens
+            vector-algorithms
+            Frames
           ];
 
         mkGhcFromScratchWith = pkgs: ghcVer: packageList:

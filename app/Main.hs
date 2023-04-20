@@ -124,7 +124,9 @@ runTg idStorage defPath getPath token tq = do
     handleAction (AnswerToUser botMsgId chatId result) model = model <# do
       editMessage
         (EditChatMessageId (SomeChatId chatId) botMsgId)
-        (toEditMessage $ prettySessionResult result)
+        (toEditMessage $ wrapMonospace (prettySessionResult result))
+          { editMessageParseMode = Just MarkdownV2
+          }
 
 makePlaceholder :: AcidState IdStorage -> MessageId -> ChatId -> BotM MessageId
 makePlaceholder idStorage userMsg chatId = do
@@ -140,8 +142,8 @@ replyToUser :: MessageId -> ChatId -> Text -> BotM MessageId
 replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ liftClientM
   (sendMessage SendMessageRequest
   { sendMessageChatId = SomeChatId chatId
-  , sendMessageText = content
-  , sendMessageParseMode = Nothing
+  , sendMessageText =wrapMonospace content
+  , sendMessageParseMode = Just MarkdownV2
   , sendMessageEntities = Nothing
   , sendMessageDisableWebPagePreview = Nothing
   , sendMessageDisableNotification = Nothing
@@ -151,6 +153,9 @@ replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ 
   , sendMessageReplyMarkup = Nothing
   })
 
+
+wrapMonospace :: Text -> Text
+wrapMonospace content = "```\n" <> content <> "\n```"
 
 type Model = ()
 
