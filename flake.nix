@@ -16,23 +16,13 @@
         pkgs2023-04-17 = nixpkgs2023-04-17.legacyPackages.${system};
         globalPkgs = pkgs2023-04-17;
 
-        foldr1 = fun: list:
-          let
-            foldr = globalPkgs.lib.foldr;
-            nil = {arg = {}; first = true;};
-            fun' = head: {arg, first}:
-              if first
-                then {arg = head; first = false; }
-                else {arg = fun head arg; inherit first; };
-          in (x: x.arg) (foldr fun' nil list);
-
-        intercalate = sep: foldr1 (h: t: "${h}${sep}${t}" );
-
         overrideHaskellPackages = hp:
           hp.override { overrides = self: super:
             { mkDerivation = args: super.mkDerivation
                 (args // { doCheck = false; doHaddock = false; });
             }; };
+
+        intercalate = globalPkgs.lib.concatStringsSep;
 
         haskellPackages = globalPkgs.haskell.packages.ghc927;
 
@@ -52,6 +42,8 @@
             generic-lens
             vector-algorithms
             vinyl
+            wreq
+            servant
           ];
 
         mkGhcFromScratchWith = pkgs: ghcVer: packageList:
@@ -74,7 +66,7 @@
 
         ghcDeps =  builtins.attrValues ghcs ++ [globalPkgs.bash globalPkgs.coreutils];
 
-        envVars = {workers ? 8, timeout ? defaultTO, workDir ? "/usr/share/plaground-hs" }:
+        envVars = {workers ? 8, timeout ? defaultTO, workDir ? "$HOME/.local/share/plaground-hs" }:
           with globalPkgs;
             ( builtins.mapAttrs (key: val: "${val}/bin/ghc" ) ghcs ) //
             {
@@ -85,7 +77,7 @@
               SCRIPTS_DIR   = ./scripts;
               WORK_DIR      = workDir;
               WORKERS_COUNT = toString workers;
-              TIMEOUT       = intercalate ","  (map (x: toString x) (timeoutToList timeout));
+              TIMEOUT       = intercalate "," (map (x: toString x) (timeoutToList timeout));
             };
 
         timeoutToList = timeout:
@@ -101,6 +93,14 @@
               sha256 = "sha256-LiGw+ys9+bcy5EL+q5wS7UzwAqqtACHbNrV/GTkwWg4=";
             } {};
           };
+
+        packages.${"${packageName}-full"} =
+          globalPkgs.writeShellScriptBin "playground-hs" ''
+          ${intercalate " " (
+              globalPkgs.lib.mapAttrsToList (name: value: name + "=" + value)
+              (envVars {}))
+            } ${self.packages.${system}.${packageName}}/bin/playground-hs
+          '';
 
         legacyPackages = globalPkgs;
 
@@ -154,8 +154,8 @@
                 serviceConfig = {
                     ExecStart = "${self.defaultPackage.${system}}/bin/playground-hs";
                     EnvironmentFile = cfg.envFile;
-                    Environment = concatStringsSep " "
-                      (globalPkgs.lib.mapAttrsToList (name: value: name + "=" + value)
+                    Environment = intercalate " "
+                      (mapAttrsToList (name: value: name + "=" + value)
                       (envVars
                         { workers = cfg.workersCount;
                           timeout = cfg.timeout;
@@ -173,7 +173,7 @@
             lzma
             zlib
           ];
-          inputsFrom = map (__getAttr "env") (__attrValues self.packages.${system});
+          inputsFrom = [ self.packages.${system}.${packageName}.env ];
         } // envVars { workDir = "id-storage"; });
       });
 }
