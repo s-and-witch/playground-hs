@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 . scripts/common
 
 timeout -k "${TIMEOUT[0]}" "${TIMEOUT[1]}" $GHC -o kek Main.hs $2

@@ -180,7 +180,7 @@ registerNewReply idStorage userMsg chatId content = do
   pure botMsg
 
 replyToUser :: MessageId -> ChatId -> Text -> BotM MessageId
-replyToUser msgId chatId content =  fmap (messageMessageId . responseResult ) $ liftClientM
+replyToUser msgId chatId content =  (messageMessageId . responseResult ) <$> liftClientM
   (sendMessage SendMessageRequest
   { sendMessageChatId = SomeChatId chatId
   , sendMessageText =wrapMonospace content
