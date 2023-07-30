@@ -50,15 +50,5 @@ TG_TOKEN=...
 
 ## Usage
 
-You can play with this playground, using https://t.me/LaTelagrambdaBot
-
-A command should be in this form:
-```
-/runhaskell <ARGS>
--- haskell code
--- haskell code
-```
-Where \<ARGS\> are
-- GHC version: ghc8107|ghc902(default)|ghc924|ghc942
-- Action: core|run(default)
-- Optimistaion level: O0(default)|O1|O2
+You can play with this playground, using https://t.me/runhaskellbot
+Type `/help_haskell` to get more info.
