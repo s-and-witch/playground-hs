@@ -18,7 +18,7 @@ import Playground.Types.Timeout       (Timeout (..))
 import System.Process.Typed           (ProcessConfig)
 
 
-runBwrap :: Monad m => Script -> OptLevel -> GhcPath -> ByteString ->  ReaderT BwrapEnv m (ProcessConfig () () ())
+runBwrap :: Monad m => Script -> OptLevel -> GhcPath -> ByteString -> ReaderT BwrapEnv m (ProcessConfig () () ())
 runBwrap script optLevel (MkGhcPath ghcPath) workspaceDir = do
   MkBwrapEnv{..} <- ask
 
