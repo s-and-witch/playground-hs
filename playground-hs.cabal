@@ -106,6 +106,7 @@ library
     , split
     , stm
     , telegram-bot-simple
+    , telegram-bot-api
     , text
     , time
     , typed-process
@@ -142,6 +143,7 @@ executable playground-hs
     , playground-hs
     , stm
     , telegram-bot-simple  >=0.6.0
+    , telegram-bot-api
     , text
     , time
 

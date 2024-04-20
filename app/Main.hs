@@ -181,18 +181,11 @@ registerNewReply idStorage userMsg chatId content = do
 
 replyToUser :: MessageId -> ChatId -> Text -> BotM MessageId
 replyToUser msgId chatId content =  (messageMessageId . responseResult ) <$> liftClientM
-  (sendMessage SendMessageRequest
-  { sendMessageChatId = SomeChatId chatId
-  , sendMessageText =wrapMonospace content
-  , sendMessageParseMode = Just MarkdownV2
-  , sendMessageEntities = Nothing
-  , sendMessageDisableWebPagePreview = Nothing
-  , sendMessageDisableNotification = Nothing
-  , sendMessageProtectContent = Nothing
-  , sendMessageReplyToMessageId = Just msgId
-  , sendMessageAllowSendingWithoutReply = Nothing
-  , sendMessageReplyMarkup = Nothing
-  })
+  (sendMessage
+    (defSendMessage (SomeChatId chatId) (wrapMonospace content))
+      { sendMessageParseMode = Just MarkdownV2
+      , sendMessageReplyToMessageId = Just msgId
+      })
 
 editMsg :: MessageId -> ChatId -> Text -> BotM ()
 editMsg msgId chatId content =

@@ -7,14 +7,16 @@
 
   inputs = {
     nixpkgs2023-04-17.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs2024-04-20.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs2023-04-17, flake-utils }:
+  outputs = { self, nixpkgs2023-04-17, nixpkgs2024-04-20, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs2023-04-17 = nixpkgs2023-04-17.legacyPackages.${system};
-        globalPkgs = pkgs2023-04-17;
+        pkgs2024-04-20 = nixpkgs2024-04-20.legacyPackages.${system};
+        globalPkgs = pkgs2024-04-20;
 
         overrideHaskellPackages = hp:
           hp.override { overrides = self: super:
@@ -24,7 +26,7 @@
 
         intercalate = globalPkgs.lib.concatStringsSep;
 
-        haskellPackages = globalPkgs.haskell.packages.ghc927;
+        haskellPackages = globalPkgs.haskell.packages.ghc964;
 
         packageName = "playground-hs";
 
@@ -50,7 +52,7 @@
           let hp = overrideHaskellPackages (pkgs.haskell.packages.${ghcVer});
           in hp.ghcWithPackages packageList;
 
-        mkGhcSimle = pkgs: ghcVer:
+        mkGhcSimple = pkgs: ghcVer:
           pkgs.haskell.packages.${ghcVer}.ghcWithPackages genericPackages;
 
         mkGhcFromScratch = pkgs: ghcVer:
@@ -58,10 +60,11 @@
 
         ghcs = {
           ghc8107 = mkGhcFromScratch     pkgs2023-04-17 "ghc8107";
-          ghc902  = mkGhcSimle           pkgs2023-04-17 "ghc902";
-          ghc927  = mkGhcSimle           pkgs2023-04-17 "ghc927";
+          ghc902  = mkGhcSimple          pkgs2023-04-17 "ghc902";
+          ghc927  = mkGhcSimple          pkgs2023-04-17 "ghc927";
           ghc944  = mkGhcFromScratch     pkgs2023-04-17 "ghc944";
-          ghc961  = mkGhcFromScratchWith pkgs2023-04-17 "ghc961" (_: []);
+          ghc964  = mkGhcSimple          pkgs2024-04-20 "ghc964";
+          ghc982  = mkGhcFromScratchWith pkgs2024-04-20 "ghc982" (_: []);
         };
 
         ghcDeps =  builtins.attrValues ghcs ++ [globalPkgs.bash globalPkgs.coreutils];
@@ -87,11 +90,11 @@
       in {
         packages.${packageName} =
           haskellPackages.callCabal2nix packageName self rec {
-            telegram-bot-simple = haskellPackages.callHackageDirect {
-              pkg = "telegram-bot-simple";
-              ver = "0.6.2";
-              sha256 = "sha256-LiGw+ys9+bcy5EL+q5wS7UzwAqqtACHbNrV/GTkwWg4=";
-            } {};
+            # telegram-bot-simple = haskellPackages.callHackageDirect {
+            #   pkg = "telegram-bot-simple";
+            #   ver = "0.6.2";
+            #   sha256 = "sha256-LiGw+ys9+bcy5EL+q5wS7UzwAqqtACHbNrV/GTkwWg4=";
+            # } {};
           };
 
         packages.${"${packageName}-full"} =
