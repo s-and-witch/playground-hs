@@ -155,6 +155,8 @@ runTg idStorage defPath ghcNames getPath token tq = do
           , "- `O0`, `O1`, `O2` - optimisation levels (default - O0)"
           , "- " <> ghcs
           , ""
+          , "Default GHC: " <> ghcGhc
+          , ""
           , "/help_haskell - show this message"
           , "Tips:"
           , "- It's highly recommended to edit your message instead of typing the new one"
@@ -164,6 +166,7 @@ runTg idStorage defPath ghcNames getPath token tq = do
           ]
 
         ghcs = T.intercalate ", " (map (wrapQuotes . T.decodeUtf8 . BS.toStrict) ghcNames)
+        ghcGhc = fst . T.breakOn "-with" . snd . T.breakOn  "ghc" . T.decodeUtf8 . BS.toStrict . (.selectPath) $ defPath
         wrapQuotes t = "`" <> t <> "`"
 
 makePlaceholder :: AcidState IdStorage -> MessageId -> ChatId -> BotM MessageId
