@@ -8,14 +8,16 @@
   inputs = {
     nixpkgs2023-04-17.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nixpkgs2024-04-20.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs2024-04-25.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs2023-04-17, nixpkgs2024-04-20, flake-utils }:
+  outputs = { self, nixpkgs2023-04-17, nixpkgs2024-04-20, nixpkgs2024-04-25, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs2023-04-17 = nixpkgs2023-04-17.legacyPackages.${system};
         pkgs2024-04-20 = nixpkgs2024-04-20.legacyPackages.${system};
+        pkgs2024-04-25 = nixpkgs2024-04-25.legacyPackages.${system};
         globalPkgs = pkgs2024-04-20;
 
         overrideHaskellPackages = hp:
@@ -26,7 +28,20 @@
 
         intercalate = globalPkgs.lib.concatStringsSep;
 
-        haskellPackages = globalPkgs.haskell.packages.ghc964;
+        haskellPackages = globalPkgs.haskell.packages.ghc964.override {
+          overrides = self: super: {
+            telegram-bot-simple = super.callHackageDirect {
+              pkg = "telegram-bot-simple";
+              ver = "0.14";
+              sha256 = "sha256-aNIVStEznuXEGpaOOTyvBo9zzmXK1CsrtQzaxTlIecc=";
+            } {};
+            telegram-bot-api = super.callHackageDirect {
+              pkg = "telegram-bot-api";
+              ver = "7.3";
+              sha256 = "sha256-4f1KHcdQLdo0pMLFE486R85w9qQRARmzxMALQDfcNCA=";
+            } {};
+          };
+        };
 
         packageName = "playground-hs";
 
@@ -65,6 +80,7 @@
           ghc944  = mkGhcFromScratch     pkgs2023-04-17 "ghc944";
           ghc964  = mkGhcSimple          pkgs2024-04-20 "ghc964";
           ghc982  = mkGhcFromScratchWith pkgs2024-04-20 "ghc982" (_: []);
+          ghc9101 = mkGhcFromScratchWith pkgs2024-04-25 "ghc9101" (_: []);
         };
 
         ghcDeps =  builtins.attrValues ghcs ++ [globalPkgs.bash globalPkgs.coreutils];
@@ -90,11 +106,7 @@
       in {
         packages.${packageName} =
           haskellPackages.callCabal2nix packageName self rec {
-            # telegram-bot-simple = haskellPackages.callHackageDirect {
-            #   pkg = "telegram-bot-simple";
-            #   ver = "0.6.2";
-            #   sha256 = "sha256-LiGw+ys9+bcy5EL+q5wS7UzwAqqtACHbNrV/GTkwWg4=";
-            # } {};
+
           };
 
         packages.${"${packageName}-full"} =
