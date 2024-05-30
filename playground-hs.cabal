@@ -60,6 +60,7 @@ common warnings
     LambdaCase
     OverloadedRecordDot
     RecordWildCards
+    NoFieldSelectors
 
 library
   -- Import common warning flags.

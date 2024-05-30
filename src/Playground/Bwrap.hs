@@ -27,9 +27,6 @@ runBwrap script optLevel (MkGhcPath ghcPath) workspaceDir = do
     , "-p", "MemoryAccounting=yes"
     , "-p", "MemoryMax=512M"
     , "--"
-    , "timeout", "-k"
-    , intToBs $ timeout.ghcTerm + timeout.processTerm
-    , intToBs $ timeout.ghcKill + timeout.processKill
     , bwrap, "--unshare-all"
     , "--size", intToBs (128 * 1024 * 1024), "--tmpfs", "/"
     , "--dev", "/dev"
