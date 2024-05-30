@@ -12,4 +12,5 @@ data BwrapEnv = MkBwrapEnv
   , bwrap       :: Bwrap
   , runtimeDeps :: [ByteString]
   , timeout     :: Timeout
+  , timeoutProg :: ByteString
   }

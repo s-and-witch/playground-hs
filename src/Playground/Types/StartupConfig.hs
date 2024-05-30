@@ -23,6 +23,7 @@ data StartupConfig = MkStartupConfig
   , ghcDeps      :: ByteString
   , tgToken      :: Text
   , timeout      :: Timeout
+  , timeoutProg  :: ByteString
   }
   deriving Show
 
@@ -38,6 +39,7 @@ instance FromEnv StartupConfig where
     ghcDeps      <- env "GHC_DEPS"
     tgToken      <- env "TG_TOKEN"
     timeout      <- env "TIMEOUT"
+    timeoutProg  <- env "TIMEOUT_PROG"
     pure MkStartupConfig {..}
 
 loadGhcs :: [ByteString] -> Parser (Map.Map ByteString GhcPath)

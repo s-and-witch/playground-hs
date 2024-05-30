@@ -97,6 +97,7 @@
               WORK_DIR      = workDir;
               WORKERS_COUNT = toString workers;
               TIMEOUT       = intercalate "," (map (x: toString x) (timeoutToList timeout));
+              TIMEOUT_PROG  = "${coreutils}/bin/timeout";
             };
 
         timeoutToList = timeout:

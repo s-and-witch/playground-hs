@@ -13,7 +13,7 @@ import Playground.Types.GhcVersion    (GhcPath (..))
 import Playground.Types.OptLevel      (OptLevel, selectOptimisation)
 import Playground.Types.Script        (Script, selectScript)
 import Playground.Types.StartupConfig (StartupConfig (..))
-import Playground.Types.Timeout       (Timeout (..), showTimeout)
+import Playground.Types.Timeout       (Timeout(..), showTimeout)
 
 import System.Process.Typed           (ProcessConfig)
 
@@ -27,6 +27,8 @@ runBwrap script optLevel (MkGhcPath ghcPath) workspaceDir = do
     , "-p", "MemoryAccounting=yes"
     , "-p", "MemoryMax=512M"
     , "--"
+    , timeoutProg, "-s", "9"
+    , intToBs (timeout.ghcKill + timeout.processKill)
     , bwrap, "--unshare-all"
     , "--size", intToBs (128 * 1024 * 1024), "--tmpfs", "/"
     , "--dev", "/dev"
@@ -42,7 +44,7 @@ runBwrap script optLevel (MkGhcPath ghcPath) workspaceDir = do
     , selectScript script, showTimeout timeout, selectOptimisation optLevel
     ]
   where
-    intToBs ::  Int -> ByteString
+    intToBs :: Int -> ByteString
     intToBs = BS.pack . show
 
 makeRoBinds :: ByteString -> [ByteString]
